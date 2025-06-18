@@ -10,5 +10,5 @@ news_item = get_news()
 summaries = summarize_news(news_item)
 
 for i, summary in enumerate(summaries):
-    st.subheader(f"News {i+1}")
-    st.write(summary)
+    st.subheader(f"News {i+1}: " + summary[0])
+    st.write(summary[1])
