@@ -1,3 +1,5 @@
 .venv
 AINewsCollector/.env
 comment-sprite/node_modules
+AINewsCollector/.DS_Store
+.DS_Store
