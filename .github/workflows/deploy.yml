@@ -63,7 +63,6 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 32200
           envs: IMAGE_NAME,CR_PAT,GITHUB_ACTOR        # 👈 这三个环境变量注入远程 shell
           script: |
             # --- 登录 GHCR（镜像是私有才需要；你也可以改成 public 省去这一步）---
