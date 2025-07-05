@@ -20,7 +20,7 @@ jobs:
             - uses: actions/checkout@v4
             # 这里在构建镜像
             - name: Build Docker image
-              run: docker build -t $IMAGE_NAME:${{ github.sha }} . # 在这里创建image
+              run: docker build -f ./AINewsCollector/Dockerfile -t $IMAGE_NAME:${{ github.sha }} ./AINewsCollector # 在这里创建image
 
             # 登录GHCR
             - name: Login to GHCR
