@@ -1,81 +1,90 @@
 name: CI & CD
 
 on:
-    push:
-        branches: [ "main" ]
-    pull_request:
-        branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 env:
-    IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_NAME: ghcr.io
 
 jobs:
-    build-and-push:
-        runs-on: ubuntu-latest
-        permissions:
-            packages: write
-            contents: read
-        
-        steps:
-            - uses: actions/checkout@v4
-            # 这里在构建镜像
-            - name: Build Docker image
-              run: docker build -f ./AINewsCollector/Dockerfile -t $IMAGE_NAME:${{ github.sha }} ./AINewsCollector # 在这里创建image
-
-            # 登录GHCR
-            - name: Login to GHCR
-              uses: docker/login-action@v3
-              with:
-                registry: ghcr.io
-                username: ${{ github.actor }}
-                password: ${{ secrets.GITHUB_TOKEN }}
-            
-            # 推送镜像到DockerHub
-            - name: Push Docker Image
-              run: |
-                docker tag $IMAGE_NAME:${{ github.sha }} $IMAGE_NAME:latest
-                docker push $IMAGE_NAME:${{ github.sha }}
-                docker push $IMAGE_NAME:latest
- 
-    deploy:
-        needs: build-and-push
-        runs-on: ubuntu-latest
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    
     steps:
-        # ① 重新计算 IMAGE_NAME（每个 job 单独来一遍最省事）
-        - name: Set IMAGE_NAME (lowercase)
-          id: set_image
+      - uses: actions/checkout@v4
+      - name: SET IMAGE_NAME (lowercase)
+        shell: bash
         run: |
-            echo "IMAGE_NAME=ghcr.io/$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          # ${GITHUB_REPOSITORY,,} 是 Bash 的“全部转小写”语法
+          #echo "IMAGE_NAME=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+          #echo "IMAGE_NAME=ghcr.io/$(echo \"$GITHUB_REPOSITORY\" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+          echo IMAGE_NAME=ghcr.io/$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]') >> "$GITHUB_ENV"
 
-        # ② 将 IMAGE_NAME 和 CR_PAT 传进远程 SSH 会话
-        - name: Deploy via SSH
+
+
+      # 这里在构建镜像
+      - name: Build Docker image
+        run: docker build -f ./AINewsCollector/Dockerfile -t $IMAGE_NAME:${{ github.sha }} ./AINewsCollector # 在这里创建image
+
+      # 登录GHCR
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      # 推送镜像到DockerHub
+      - name: Push Docker Image
+        run: |
+          docker tag $IMAGE_NAME:${{ github.sha }} $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:${{ github.sha }}
+          docker push $IMAGE_NAME:latest
+ 
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set IMAGE_NAME (lowercase)
+        id: set_image
+        run: |
+          echo "IMAGE_NAME=ghcr.io/$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      # ② 将 IMAGE_NAME 和 CR_PAT 传进远程 SSH 会话
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-            host: ${{ secrets.SSH_HOST }}
-            username: ${{ secrets.SSH_USER }}
-            key: ${{ secrets.SSH_PRIVATE_KEY }}
-            port: 32200
-            envs: IMAGE_NAME,CR_PAT,GITHUB_ACTOR        # 👈 这三个环境变量注入远程 shell
-            script: |
-              # --- 登录 GHCR（镜像是私有才需要；你也可以改成 public 省去这一步）---
-              if [ -n "$CR_PAT" ]; then
-                  echo "$CR_PAT" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-              fi
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 32200
+          envs: IMAGE_NAME,CR_PAT,GITHUB_ACTOR        # 👈 这三个环境变量注入远程 shell
+          script: |
+            # --- 登录 GHCR（镜像是私有才需要；你也可以改成 public 省去这一步）---
+            if [ -n "$CR_PAT" ]; then
+              echo "$CR_PAT" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+            fi
 
-              # --- 拉取最新镜像 ---
-              docker pull $IMAGE_NAME:latest
+            # --- 拉取最新镜像 ---
+            docker pull $IMAGE_NAME:latest
 
-              # --- 停掉旧容器并删除 ---
-              docker rm -f ainewscollector || true
+            # --- 停掉旧容器并删除 ---
+            docker rm -f ainewscollector || true
 
-              # --- 启动新容器 ---
-              docker run -d \
-                  --name ainewscollector \
-                  -p 8501:8501 \
-                  -e STREAMLIT_SERVER_HEADLESS=true \
-                  -e STREAMLIT_SERVER_PORT=8501 \
-                  -e STREAMLIT_SERVER_ENABLECORS=false \
-                  $IMAGE_NAME:latest
+            # --- 启动新容器 ---
+            docker run -d \
+              --name ainewscollector \
+              -p 8501:8501 \
+              -e STREAMLIT_SERVER_HEADLESS=true \
+              -e STREAMLIT_SERVER_PORT=8501 \
+              -e STREAMLIT_SERVER_ENABLECORS=false \
+              $IMAGE_NAME:latest
 
-              # --- 清理 24h 前的悬挂镜像 ---
-              docker image prune -f --filter "until=24h"
+            # --- 清理 24h 前的悬挂镜像 ---
+            docker image prune -f --filter "until=24h"
