@@ -58,7 +58,7 @@ jobs:
                 host: ${{ secrets.SSH_HOST }}
                 username: ${{ secrets.SSH_USER }}
                 key: ${{ secrets.SSH_PRIVATE_KEY }}
-                envs: IMAGE_NAME
+                envs: IMAGE_NAME, CR_PAT
                 script: |
                     docker pull $IMAGE_NAME:latest
                     docker rm gordenfl/ainewscollector || true
