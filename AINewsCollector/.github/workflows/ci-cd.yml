@@ -1,0 +1,61 @@
+name: CI & CD
+
+on:
+    push:
+        branches: [ "main" ]
+    pull_request:
+        branches: [ "main" ]
+
+env:
+    IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+    build-and-push:
+        runs-on: ubuntu-latest
+        permissions:
+            packages: write
+            contents: read
+        
+        steps:
+            - uses: actions/checkout@v4
+            # 这里在构建镜像
+            - name: Build Docker image
+              run: docker build -t $IMAGE_NAME:${{ github.sha }} . # 在这里创建image
+
+            # 登录GHCR
+            - name: Login to GHCR
+              uses: docker/login-action@v3
+              with:
+                registry: ghcr.io
+                username: ${{ github.actor }}
+                password: ${{ secrets.GITHUB_TOKEN }}
+            
+            # 推送镜像到DockerHub
+            - name: Push Docker Image
+              run: |
+                docker tag $IMAGE_NAME:${{ github.sha }} $IMAGE_NAME:latest
+                docker push $IMAGE_NAME:${{ github.sha }}
+                docker push $IMAGE_NAME:latest
+
+    deploy:
+        needs: build-and-push
+        runs-on: ubuntu-latest
+        steps:
+            - name: Deploy via SSH
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                host: ${{ secrets.SSH_HOST }}
+                username: ${{ secrets.SSH_USER }}
+                key: ${{ secrets.SSH_PRIVATE_KEY }}
+                script: |
+                    docker pull $IMAGE_NAME:latest
+                    docker rm gordenfl/ainewscollector
+                    docker run -d \
+                        --name ainewscollector
+                        -p 8501:8501
+                        -e STREAMLIT_SERVER_HEADLESS=true \
+                        -e STREAMLIT_SERVER_PORT=8501 \
+                        -e STREAMLIT_SERVER_ENABLECORS=false \
+                        $IMAGE_NAME:latest
+
+                    docker image prune -f --filter "until=24h"
