@@ -22,7 +22,7 @@ jobs:
               shell: bash
               run: |
                 # ${GITHUB_REPOSITORY,,} 是 Bash 的“全部转小写”语法
-                echo "IMAGE_NAME=${REGISTRY}/$${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+                echo "IMAGE_NAME=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
             # 这里在构建镜像
             - name: Build Docker image
