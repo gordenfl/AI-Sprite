@@ -14,7 +14,7 @@ COPY . .
 EXPOSE 8501
 CMD ["streamlit", "run", "app/worker.py"]
 
-
+   
 # docker buildx build --platform linux/amd64 -t gordenfl/ainewscollector:latest . 
 # 这个命令就可以将我的项目build 一个docker image, 在本地就会有一个image, 
 # 然后你需要 login 到远程的docker hub上, 就是   docker login
