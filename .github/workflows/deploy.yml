@@ -23,7 +23,9 @@ jobs:
               run: |
                 # ${GITHUB_REPOSITORY,,} 是 Bash 的“全部转小写”语法
                 #echo "IMAGE_NAME=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-                echo "IMAGE_NAME=ghcr.io/$(echo \"$GITHUB_REPOSITORY\" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+                #echo "IMAGE_NAME=ghcr.io/$(echo \"$GITHUB_REPOSITORY\" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+                echo IMAGE_NAME=ghcr.io/$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]') >> "$GITHUB_ENV"
+
 
 
             # 这里在构建镜像
