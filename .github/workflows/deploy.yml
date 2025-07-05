@@ -7,7 +7,7 @@ on:
         branches: [ "main" ]
 
 env:
-    IMAGE_NAME: ghcr.io/${{ github.repository }}
+    IMAGE_NAME: ghcr.io
 
 jobs:
     build-and-push:
@@ -18,6 +18,12 @@ jobs:
         
         steps:
             - uses: actions/checkout@v4
+            - name: SET IMAGE_NAME (lowercase)
+              shell: bash
+              run: |
+                # ${GITHUB_REPOSITORY,,} 是 Bash 的“全部转小写”语法
+                echo "IMAGE_NAME=${REGISTRY}/$${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
             # 这里在构建镜像
             - name: Build Docker image
               run: docker build -f ./AINewsCollector/Dockerfile -t $IMAGE_NAME:${{ github.sha }} ./AINewsCollector # 在这里创建image
