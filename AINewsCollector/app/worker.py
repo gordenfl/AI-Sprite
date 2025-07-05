@@ -4,7 +4,7 @@ from llm_chain import summarize_news
 
 
 
-st.title("TEST AI news general assistant") #设置网页的title
+st.title("GORDON AI news general assistant") #设置网页的title
 
 news_item = get_news(int(st.query_params.get("size", 10))) #获取size条, 如果size不存在就是10条
 summaries = summarize_news(news_item)
